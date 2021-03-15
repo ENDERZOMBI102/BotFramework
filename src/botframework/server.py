@@ -1,28 +1,27 @@
 import asyncio
-from typing import Dict, Callable, Coroutine, Union
+from typing import Dict, Callable, Coroutine, Union, Any
 
-from discord import Message, Reaction, Member, Emoji
+from discord import Message, Reaction, Member
 import discord
 
 import logging
 
-from . import Database
+from . import Database, utils
 from .abc.database.guild import AbstractGuild
 from .abc.server import AbstractServer
 from .dataclass.user import User
+from .eventSystem import EventSystem, Events
 from .logging import get_logger
 import botframework.commandSystem
 
 
-defaultPerms = {
+defaultPerms: Dict[str, Any] = {
 	'manage bot': True,
 	'start game': True,
 	'edit permissions': True,
 }
-
-
-async def DefCommand( server: AbstractServer, msg: Message ) -> int:
-	return 1
+defaultSecondaryPrefixes: Dict[int, str] = {
+}
 
 
 class Server( AbstractServer ):
@@ -37,9 +36,7 @@ class Server( AbstractServer ):
 		self.guild = guild
 		self.logger = get_logger( guild.name )
 		self.commands = botframework.commandSystem.instance
-		self.secondaryPrefix = {
-			350938367405457408: '$$'
-		}
+		self.secondaryPrefix = { **defaultSecondaryPrefixes }  # do not use the same dict, clone it
 
 	async def handleMsg( self, msg: Message ):
 		"""
@@ -55,6 +52,11 @@ class Server( AbstractServer ):
 					prefix=self.prefix
 				)
 			)
+		await EventSystem.INSTANCE.invoke(
+			event=Events.MessageArrived,
+			server=self,
+			msg=msg
+		)
 		prefix = self.prefix
 		if not msg.content.startswith( prefix ):
 			if msg.author.id not in self.secondaryPrefix.keys():
@@ -72,14 +74,14 @@ class Server( AbstractServer ):
 			f'issuer: {msg.author.name}'
 		)
 		# get function/coroutine
-		coro: Union[Coroutine, Callable] = self.commands.getOrDefault( cmd[ 0 ].lower(), DefCommand )
+		coro: Union[Coroutine, Callable] = self.commands.getOrDefault( cmd[ 0 ].lower(), utils.placeHolderCoro )
 		# check if its a command/coroutine
 		if not asyncio.iscoroutinefunction(coro):
 			return
 		# execute command
 		code = await coro(self, msg)
-		# check return code
-		if code == 1:
+		# check return code, None means that the placeholder was used
+		if code is None:
 			await msg.channel.send( f'Unknown command: {cmd[ 0 ]}' )
 
 	async def handleReactionAdd( self, reaction: Reaction, user: Member ) -> None:
@@ -91,7 +93,12 @@ class Server( AbstractServer ):
 		self.logger.info(
 			f'guild: {self.guild.name}, '
 			f'emoji: {reaction.emoji if isinstance(reaction.emoji, str) else reaction.emoji.name}, '
-			f'issuer: {user.name}'
+			f'cause: {user.name}'
+		)
+		await EventSystem.INSTANCE.invoke(
+			event=Events.ReactionAdded,
+			reaction=reaction,
+			cause=user
 		)
 
 	async def handleReactionRemove( self, reaction: Reaction, user: Member ) -> None:
@@ -103,7 +110,12 @@ class Server( AbstractServer ):
 		self.logger.info(
 			f'guild: {self.guild.name}, '
 			f'emoji: {reaction.emoji if isinstance(reaction.emoji, str) else reaction.emoji.name}, '
-			f'issuer: {user.name}'
+			f'cause: {user.name}'
+		)
+		await EventSystem.INSTANCE.invoke(
+			event=Events.ReactionRemoved,
+			reaction=reaction,
+			cause=user
 		)
 
 	def GetDatabase( self ) -> AbstractGuild:

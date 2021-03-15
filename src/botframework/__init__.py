@@ -71,10 +71,6 @@ class Bot:
 		if msg.author.bot:
 			return
 
-		from discord import TextChannel
-		from discord import Guild
-		msg.channel: TextChannel
-		msg.guild: Guild
 		# add the guild to the tracked server if it doesn't exist
 		if msg.guild.id not in self.servers.keys():
 			if msg.guild in self.client.guilds:
