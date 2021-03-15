@@ -21,10 +21,9 @@ def color_palette():
 	return choice(colors)
 
 
-def getAuthors() -> Callable[ [], int ]:
-	def authors() -> int:
-		# ENDER
-		return 350938367405457408
+def getAuthors() -> Callable[ [], List[int] ]:
+	def authors() -> List[int]:
+		return []
 	return authors
 
 
@@ -82,15 +81,21 @@ def getTracebackEmbed( exc: Exception ) -> Embed:
 	)
 
 
-def copyList(tocopy: Iterable ) -> List[Any]:
+def copyList(source: Iterable[Any] ) -> List[Any]:
 	"""
 	Copies an iterable to another list
-	:param tocopy: itarable to copy
+	:param source: iterable to copy
 	:return: the copied list
 	"""
-	return [ x for x in tocopy]
+	return [ x for x in source]
 
 
 def placeHolderFunc(*args, **kwargs):
 	""" Just a placeholder for functions that require a function """
 	pass
+
+
+async def placeHolderCoro(*args, **kwargs):
+	""" Just a placeholder for functions that require a coroutine """
+	pass
+
