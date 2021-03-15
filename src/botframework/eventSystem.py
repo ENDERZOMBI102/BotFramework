@@ -1,5 +1,6 @@
 from typing import Dict
 
+from botframework import utils
 from botframework.abc.eventSystem import AbstractEventSystem
 from botframework.logging import get_logger
 from botframework.types import ListenerList, Event, Coroutine
@@ -35,6 +36,12 @@ class EventSystem(AbstractEventSystem):
 		self._listeners[ event ].append( listener )
 
 	async def invoke( self, event: Event, **kwargs ):
+		"""
+		Invoke an event, calling all listener that are listening for it, with the given kwargs.
+		:param event: event to trigger
+		:param kwargs: listener parameters
+		:return:
+		"""
 		if event not in self._listeners.keys():
 			self._listeners[ event ] = []
 
@@ -42,7 +49,12 @@ class EventSystem(AbstractEventSystem):
 			logger.warning(f'Invoked event "{event}" has no _listeners!')
 
 		for listener in self._listeners[event ]:
-			await listener(**kwargs)
+			try:
+				await listener(**kwargs)
+			except Exception as e:
+				logger.error(
+					f'Caught error for listener "{listener.__name__}" from module "{listener.__module__}" while invoking event {event}\n'
+				)
 
 
 # event listeners should be named:
