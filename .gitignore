@@ -5,3 +5,4 @@ logs
 .env
 *.bat
 /identifier.sqlite
+src/botframework_enderzombi102.egg-info
