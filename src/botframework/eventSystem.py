@@ -1,11 +1,17 @@
-from typing import Dict
+from enum import Enum
+from typing import Dict, Union
 
-from botframework import utils
 from botframework.abc.eventSystem import AbstractEventSystem
 from botframework.logging import get_logger
 from botframework.types import ListenerList, Event, Coroutine
 
 logger = get_logger('EventSystem')
+
+
+class Events(Enum):
+	ReactionAdded = 'add-react'
+	ReactionRemoved = 'rem-react'
+	MessageArrived = 'rec-msg'
 
 
 class EventSystem(AbstractEventSystem):
@@ -22,9 +28,9 @@ class EventSystem(AbstractEventSystem):
 			toRemove = []
 			for listener in listenerList:
 				if listener.__module__ == module:
-					toRemove.append( listener )  # schedule for removal all _listeners of module module
+					toRemove.append( listener )  # schedule for removal all listeners of module module
 			for func in toRemove:
-				listenerList.remove(func)  # remove all found _listeners
+				listenerList.remove(func)  # remove all found listeners
 
 	def addListener( self, listener: Coroutine, event: Event ):
 		# check if the event list exists
@@ -35,7 +41,7 @@ class EventSystem(AbstractEventSystem):
 		logger.info( f'Module "{listener.__module__}" registered listener for event "{event}".' )
 		self._listeners[ event ].append( listener )
 
-	async def invoke( self, event: Event, **kwargs ):
+	async def invoke( self, event: Union[Event, Events], **kwargs ):
 		"""
 		Invoke an event, calling all listener that are listening for it, with the given kwargs.
 		:param event: event to trigger
@@ -53,7 +59,8 @@ class EventSystem(AbstractEventSystem):
 				await listener(**kwargs)
 			except Exception as e:
 				logger.error(
-					f'Caught error for listener "{listener.__name__}" from module "{listener.__module__}" while invoking event {event}\n'
+					f'Caught error for listener "{listener.__name__}" from module "{listener.__module__}" while invoking event {event}',
+					exc_info=e
 				)
 
 
