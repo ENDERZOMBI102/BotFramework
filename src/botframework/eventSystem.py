@@ -1,4 +1,4 @@
-from enum import Enum
+from types import FunctionType
 from typing import Dict, Union
 
 from botframework.abc.eventSystem import AbstractEventSystem
@@ -8,10 +8,11 @@ from botframework.types import ListenerList, Event, Coroutine
 logger = get_logger('EventSystem')
 
 
-class Events(Enum):
-	ReactionAdded = 'add-react'
-	ReactionRemoved = 'rem-react'
-	MessageArrived = 'rec-msg'
+class Events:
+	ReactionAdded = 'ReactionAdded'.lower()
+	ReactionRemoved = 'ReactionRemoved'.lower()
+	MessageArrived = 'message'
+	Reload = 'reload'
 
 
 class EventSystem(AbstractEventSystem):
@@ -40,13 +41,13 @@ class EventSystem(AbstractEventSystem):
 		# add the listener
 		logger.info( f'Module "{listener.__module__}" registered listener for event "{event}".' )
 		self._listeners[ event ].append( listener )
+		return listener
 
 	async def invoke( self, event: Union[Event, Events], **kwargs ):
 		"""
-		Invoke an event, calling all listener that are listening for it, with the given kwargs.
+		Invoke an event, calling all listeners that are listening for it, with the given kwargs.
 		:param event: event to trigger
 		:param kwargs: listener parameters
-		:return:
 		"""
 		if event not in self._listeners.keys():
 			self._listeners[ event ] = []
@@ -64,18 +65,29 @@ class EventSystem(AbstractEventSystem):
 				)
 
 
+EventSystem()
+
 # event listeners should be named:
 # onEventName
 
-def Listener(func: Coroutine):
+def Listener(*args: Union[str, FunctionType], **kwargs):
 	"""
 	Decorator for event listeners.
 	listeners should be named after the event they are listening for, ex:
+
 	@Listener
 	async def onMessage(server: AbstractServer, msg: Message):
 		pass
-	:param func: the listener
+
+	if this is not possible, an event parameter can be passed to the decorator to set it,
 	"""
-	event: str = func.__code__.co_name[2:].lower()
+	# check if called without parameters
+	if len( args ) > 0 and type( args[0] ) == FunctionType:
+		# add the listener with even from func name
+		return EventSystem.INSTANCE.addListener( args[0], args[0].__code__.co_name[2:].lower() )
+
+	# called with parameter, get it
+	event: str = kwargs.get( 'event' ) if 'event' in kwargs else args[0]
+
 	# add the listener
-	EventSystem.INSTANCE.addListener(func, event)
+	return lambda func: EventSystem.INSTANCE.addListener(func, event)
