@@ -6,13 +6,12 @@ import discord
 
 import logging
 
-from . import Database, utils
+from . import Database, utils, commandSystem
 from .abc.database.guild import AbstractGuild
 from .abc.server import AbstractServer
 from .dataclass.user import User
 from .eventSystem import EventSystem, Events
 from .logging import get_logger
-import botframework.commandSystem
 
 
 defaultPerms: Dict[str, Any] = {
@@ -29,13 +28,13 @@ class Server( AbstractServer ):
 	guild: discord.Guild
 	prefix: str = '*'
 	roleRules: Dict[ str, object ]
-	commands: botframework.commandSystem.CommandSystem
+	commands: commandSystem.CommandSystem
 	logger: logging.Logger
 
 	def __init__(self, guild: discord.Guild):
 		self.guild = guild
 		self.logger = get_logger( guild.name )
-		self.commands = botframework.commandSystem.instance
+		self.commands = commandSystem.instance
 		self.secondaryPrefix = { **defaultSecondaryPrefixes }  # do not use the same dict, clone it
 
 	async def handleMsg( self, msg: Message ):

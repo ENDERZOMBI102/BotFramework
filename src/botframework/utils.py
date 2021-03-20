@@ -22,9 +22,7 @@ def color_palette():
 
 
 def getAuthors() -> Callable[ [], List[int] ]:
-	def authors() -> List[int]:
-		return []
-	return authors
+	return lambda: []
 
 
 def embed(title: str, content: str, color: Color) -> Embed:
@@ -92,10 +90,10 @@ def copyList(source: Iterable[Any] ) -> List[Any]:
 
 def placeHolderFunc(*args, **kwargs):
 	""" Just a placeholder for functions that require a function """
-	pass
+	return None
 
 
 async def placeHolderCoro(*args, **kwargs):
 	""" Just a placeholder for functions that require a coroutine """
-	pass
+	return None
 
