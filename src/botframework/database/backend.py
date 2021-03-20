@@ -25,7 +25,7 @@ class SqlBackend(AbstractBackend):
 			CREATE TABLE IF NOT EXISTS users (
 				guildID INTEGER NOT NULL,
 				discordID INTEGER NOT NULL,
-				prefix TEXT NOT NULL DEFAULT "!",
+				prefix TEXT NOT NULL DEFAULT '!',
 				CONSTRAINT PK_user PRIMARY KEY (guildID, discordID)
 			)
 			'''

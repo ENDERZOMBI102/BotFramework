@@ -18,6 +18,7 @@ class Guild(AbstractGuild):
 		Update the database by adding this user or by updating the saved user with this one
 		:param user: an User object with new values
 		"""
+		self._userCache[ str( user.discordID ) ] = user
 		if self.hasUser( user.discordID, checkCache=False ):
 			self.db.makeRequest(
 				# EXPLANATION: update an existing user

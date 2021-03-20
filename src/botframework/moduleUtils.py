@@ -40,7 +40,7 @@ def reload(module: ModuleType, additionalSearchDict: Dict[str, ModuleType] = Non
 			raise ImportError(msg.format(name), name=name)
 
 	# remove all events listeners of this module
-	EventSystem.INSTANCE.removeListener(module.__name__)
+	EventSystem.INSTANCE.removeListeners(module.__name__)
 
 	if name in _RELOADING:
 		return _RELOADING[name]

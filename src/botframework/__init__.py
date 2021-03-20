@@ -1,5 +1,4 @@
 from typing import Dict
-import importlib
 
 from discord import Client, Message, Reaction, Member
 
@@ -27,6 +26,8 @@ class Bot:
 		# register event listeners
 		self.client.event( self.on_ready )
 		self.client.event( self.on_message )
+		self.client.event( self.on_reaction_add )
+		self.client.event( self.on_reaction_remove )
 		self.database = Database()
 
 	def run( self, token: str ):
@@ -90,16 +91,17 @@ class Bot:
 			# clear all servers
 			self.servers.clear()
 			# reload modules
-			import botframework.defaultCommands
+			import defaultCommands
+			import moduleUtils
 			try:
 				# utils may be imported by the command system, reload it first
-				importlib.reload( utils )
+				moduleUtils.reload( utils )
 				# reload command system _BEFORE_ everything else
-				importlib.reload( commandSystem )
-				importlib.reload( defaultCommands )
+				moduleUtils.reload( commandSystem )
+				moduleUtils.reload( defaultCommands )
 				commandSystem.init()
 				# reload the rest
-				importlib.reload( server )
+				moduleUtils.reload( server )
 				await EventSystem.INSTANCE.invoke(Events.Reload)
 			except Exception as e:
 				logger.error(f"[RELOAD] uncaught exception caught, can't complete reload!", exc_info=e)
