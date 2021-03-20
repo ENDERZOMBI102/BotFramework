@@ -1,3 +1,4 @@
+from types import FunctionType
 from typing import Coroutine, Dict, Awaitable, Union
 
 from discord import Message
@@ -45,13 +46,21 @@ class CommandSystem:
 instance: CommandSystem = CommandSystem()
 
 
-def Command( func: Coroutine[ Awaitable[ int ], AbstractServer, Message ], cname: str = None ):
+def Command( *args, **kwargs ):
 	"""
-		The @decorator for commands
-		:param func: coroutine to mark as command
-		:param cname: usually None, used to set the command name
+		The @decorator for commands.
+		this decorator may have a parameter: cname,
+		cname is the command name to use instead of the decorated coroutine name.
 	"""
-	return instance.Command(func, cname)
+	# check if called without parameters
+	if len( args ) > 0 and type( args[0] ) == FunctionType:
+		return instance.Command( args[0], None )
+
+	# called with parameter, get it
+	cname: str = kwargs.get( 'cname' ) if 'cname' in kwargs else args[0]
+
+	# return a lambda that calls instance.Command, like above
+	return lambda func: instance.Command(func, cname)
 
 
 logger.debug( 'Registering default commands' )
