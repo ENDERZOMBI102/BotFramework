@@ -6,7 +6,7 @@ with open( 'README.md', 'r', encoding='utf-8' ) as file:
 setuptools.setup(
 	#
 	name='botframework-enderzombi102',
-	version='1.0.0',
+	version='1.0.0.dev1',
 	author='ENDERZOMBI102',
 	author_email='enderzombi102.end@gmail.com',
 	# description
@@ -21,7 +21,7 @@ setuptools.setup(
 	# classification
 	keywords='',
 	classifiers=[
-		'Programming Language :: Python :: 3',
+		'Programming Language :: Python :: 3 :: 10',
 		'License :: OSI Approved :: MIT License',
 		'Operating System :: OS Independent',
 		'Development Status :: 4 - Beta',
@@ -34,8 +34,8 @@ setuptools.setup(
 		exclude='modules'
 	),
 	# dependencies
-	python_requires='>=3.7',
+	python_requires='>=3.10',
 	install_requires=[
-		'discord.py',
+		'pycord'
 	]
 )
