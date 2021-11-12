@@ -2,10 +2,11 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, Union, TextIO
+from typing import Union, TextIO
 
 import discord
 from PIL.Image import Image
+from six import Iterator
 
 
 class openingReadMode(Enum):
@@ -26,9 +27,9 @@ class fileType(Enum):
 
 class AbstractFile(metaclass=ABCMeta):
 
-	content: BytesIO = None
-	path: Path = None
-	lastEdit: float = None
+	content: BytesIO
+	path: Path
+	lastEdit: float = -1
 	defaultReadMode: openingReadMode = openingReadMode.readBytes
 	defaultWriteMode: openingWriteMode = openingWriteMode.writeBytes
 	_compressed: bool = False
@@ -47,7 +48,6 @@ class AbstractFile(metaclass=ABCMeta):
 		Replace the content of this File obj with the given bytes.
 		if resetPath is True (default) removes the path for this obj
 		:param data: bytes to write
-		:param resetPath: if True, removes the path for this obj
 		"""
 		pass
 
@@ -227,7 +227,7 @@ class AbstractFile(metaclass=ABCMeta):
 	def decompress( file: Union[ 'AbstractFile', bytes ] ) -> 'AbstractFile':
 		"""
 		Decompresses a previusly LZMA compressed File object or bytes.
-		:param compFile: compressed File or bytes
+		:param file: compressed File or bytes
 		:return: decompressed File object
 		"""
 		pass
@@ -244,10 +244,10 @@ class AbstractFile(metaclass=ABCMeta):
 
 class AbstractFolder( metaclass=ABCMeta ):
 
-	path: Path = None
+	path: Path | None = None
 
 	@abstractmethod
-	def walk( self, ftype: fileType = fileType.both ) -> Union[AbstractFile, 'AbstractFolder']:
+	def walk( self, ftype: fileType = fileType.both ) -> Iterator[ AbstractFile | 'AbstractFolder' ]:
 		""" walk on all folders and files, basically same as Folder.__iter__(), but with a fancy name """
 		pass
 
@@ -278,11 +278,11 @@ class AbstractFolder( metaclass=ABCMeta ):
 class AbstractFileSystem(metaclass=ABCMeta):
 
 	sandbox: Path
-	fileForm: AbstractFolder = None
-	cache: Dict[str, Union[ AbstractFile, AbstractFolder, 'AbstractFileSystem' ] ]
+	fileForm: AbstractFolder | None = None
+	cache: dict[ str, AbstractFile | AbstractFolder | 'AbstractFileSystem' ]
 
 	@abstractmethod
-	def get( self, path: str, ftype: fileType, layer: int = 0 ) -> Union[AbstractFile, AbstractFolder]:
+	def get( self, path: str, ftype: fileType, layer: int = 0 ) -> AbstractFile | AbstractFolder:
 		"""
 		Gets a file, folder from this on
 		:param path: path to file/folder to get

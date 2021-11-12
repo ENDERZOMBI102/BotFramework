@@ -1,7 +1,8 @@
 from io import BytesIO,  TextIOWrapper
 from pathlib import Path
 from time import time
-from typing import Union, TextIO
+from types import TracebackType
+from typing import Union, TextIO, cast, Generator, Iterator
 from lzma import compress, decompress
 
 import PIL.Image
@@ -37,8 +38,6 @@ class File(AbstractFile):
 			self.lastEdit = float( self.path.stat().st_mtime )
 		elif data is not None:
 			self.content = data if isinstance(data, BytesIO) else BytesIO(data)
-		else:
-			pass
 
 	def toBytes( self ) -> bytes:
 		"""
@@ -56,7 +55,7 @@ class File(AbstractFile):
 		:param resetPath: if True, removes the path for this obj
 		"""
 		if resetPath:
-			self.path = None
+			self.path = None  # type: ignore
 		self.content = BytesIO( data )
 
 	def read( self, mode: openingReadMode = openingReadMode.readBytes) -> Union[ bytes, str ]:
@@ -76,11 +75,11 @@ class File(AbstractFile):
 
 	def readText( self ) -> str:
 		""" This reads text, not much to say """
-		return self.read( openingReadMode.readText )
+		return cast( str, self.read( openingReadMode.readText ) )
 
 	def readBytes( self ) -> bytes:
 		""" This reads bytes, not much to say """
-		return self.read( openingReadMode.readBytes )
+		return cast( bytes, self.read( openingReadMode.readBytes ) )
 
 	def write( self, mode: openingWriteMode, data: Union[ bytes, str ] ) -> None:
 		"""
@@ -90,7 +89,7 @@ class File(AbstractFile):
 		:param data: data to write, can be bytes or str
 		"""
 		self._read()
-		self.content.write( data if mode is openingWriteMode.writeBytes else data.encode() )
+		self.content.write( data if mode is openingWriteMode.writeBytes else cast( str, data ).encode() )
 		self.lastEdit = time()
 
 	def writeText( self, data: str ) -> None:
@@ -150,7 +149,7 @@ class File(AbstractFile):
 		self._read()
 		file = File()
 		file.content = BytesIO( self.content.read() ) if isinstance( self.content, BytesIO ) else None
-		file.path = Path( self.path ) if isinstance( self.content, Path ) else None
+		file.path = Path( self.path ) if isinstance( self.content, Path ) else None  # type: ignore
 		file.lastEdit = self.lastEdit
 		return file
 
@@ -215,7 +214,7 @@ class File(AbstractFile):
 		else:
 			return image
 
-	def toDiscord( self, name=None, useName: str = False, spoiler: bool = False ) -> discord.File:
+	def toDiscord( self, name: str = None, useName: bool = False, spoiler: bool = False ) -> discord.File:
 		"""
 		Converts this file to a discord file
 		:param name: Optional discord file name
@@ -251,7 +250,7 @@ class File(AbstractFile):
 	def __enter__(self):
 		pass
 
-	def __exit__(self, exc_type, exc_val, exc_tb):
+	def __exit__(self, exc_type: type, exc_val: BaseException, exc_tb: TracebackType):
 		if self.path is not None:
 			self.updateFile()
 
@@ -273,8 +272,8 @@ class File(AbstractFile):
 		except:
 			raise
 		file = File()
-		file.content = data
-		file.path = compFile.path if isinstance(compFile, File) else None
+		file.content = BytesIO( data )
+		file.path = compFile.path if isinstance(compFile, File) else None  # type: ignore
 		return file
 
 	@staticmethod
@@ -297,8 +296,15 @@ class Folder(AbstractFolder):
 				raise FileSystemError('The provided path is not a folder!')
 		self.path = path
 
-	def walk( self, ftype: fileType = fileType.both ) -> Union[AbstractFile, AbstractFolder]:
-		""" walk on all folders and files, basically same as Folder.__iter__(), but with a fancy name """
+	def walk( self, ftype: fileType = fileType.both ) -> Iterator[ AbstractFile | AbstractFolder ]:
+		"""
+		walk on all folders and files, basically same as Folder.__iter__(), but with a fancy name
+		:param ftype: if provided, will only yield the requested type
+		:raises FileSystemException: if its a virtual folder (has no path on disk)
+		"""
+		if self.path is None:
+			raise FileSystemError("Can't walk virtual folder structure")
+
 		for file in self.path.glob('*'):
 			if file.is_dir():
 				if ftype is fileType.folder or fileType.both:
@@ -309,11 +315,14 @@ class Folder(AbstractFolder):
 
 	def exists( self ) -> bool:
 		""" Checks if this folder exist on disk """
-		return self.path.exists()
+		if isinstance( self.path, Path ):
+			return self.path.exists()
+		return False
 
 	def touch( self ) -> None:
 		"""	Creates this folder on disk """
-		self.path.mkdir()
+		if isinstance(self.path, Path):
+			self.path.mkdir()
 
 	def isFolder( self ) -> bool:
 		""" returns True if this object represents a folder """
@@ -322,7 +331,7 @@ class Folder(AbstractFolder):
 	def __str__(self) -> str:
 		return f'Folder object. path: { str( self.path.resolve() if isinstance( self.path, Path ) else None ) }'
 
-	def __iter__( self ):
+	def __iter__( self ) -> AbstractFolder:
 		self.__tmp_iter_array_index = 0
 		self.__tmp_iter_array = [ file for file in self.path.glob( '*' ) ]
 		return self
@@ -336,7 +345,7 @@ class Folder(AbstractFolder):
 		del self.__tmp_iter_array
 		raise StopIteration
 
-	def __contains__(self, item):
+	def __contains__(self, item) -> bool:
 		for path in self.path.glob('*'):
 			if path.name == item:
 				return True
@@ -364,7 +373,7 @@ class FileSystem(AbstractFileSystem):
 
 		if path.parts[layer] in self.cache.keys():
 			if isinstance( self.cache[ path.parts[layer] ], FileSystem):
-				return self.cache[ path.parts[layer] ].getAsset(path, layer + 1)
+				return self.cache[ path.parts[layer] ].getAsset( str( path ) )
 		try:
 			path.relative_to(self.sandbox)
 		except:
@@ -381,7 +390,7 @@ class FileSystem(AbstractFileSystem):
 				folder = FileSystem( path=tmp )
 				if folder.asFolder().exists():
 					self.cache[ path.parts[ layer ] ] = folder
-					return self.cache[ path.parts[layer] ].get(path, ftype, layer + 1)
+					return self.cache[ path.parts[layer] ].get( str( path ), ftype, layer + 1)
 				else:
 					raise FileSystemError( f'Unknown path {str( path )}' )
 
@@ -389,12 +398,12 @@ class FileSystem(AbstractFileSystem):
 			if path.exists() and ( not path.is_dir() ):
 				raise FileSystemError('The specified path points to a file, not a folder')
 			self.cache[ path.parts[layer] ] = Folder(path)
-			return self.cache[ path.parts[layer] ]
+			return cast( AbstractFile | AbstractFolder, self.cache[ path.parts[layer] ] )
 		else:
 			if path.exists() and ( not path.is_file() ):
 				raise FileSystemError( 'The specified path points to a folder, not a file' )
 			self.cache[ path.parts[layer] ] = File(path)
-			return self.cache[ path.parts[layer] ]
+			return cast( AbstractFile | AbstractFolder, self.cache[ path.parts[layer] ] )
 
 	def getAsset( self, path: str ) -> AbstractFile:
 		"""
@@ -402,7 +411,7 @@ class FileSystem(AbstractFileSystem):
 		:param path: file path
 		:return: File object
 		"""
-		return self.get(path)
+		return cast( AbstractFile, self.get(path, fileType.file) )
 
 	def getFolder( self, path: Union[Path, str] ) -> AbstractFolder:
 		"""
@@ -410,7 +419,7 @@ class FileSystem(AbstractFileSystem):
 		:param path: folder path
 		:return: Folder object
 		"""
-		return self.get(path, fileType.folder)
+		return cast( AbstractFolder, self.get(path, fileType.folder) )
 
 	def create( self, path: str, name: str ) -> None:
 		"""
@@ -429,7 +438,7 @@ class FileSystem(AbstractFileSystem):
 		self.fileForm = Folder( self.sandbox )
 		return self.fileForm
 
-	def __iter__( self ):
+	def __iter__( self ) -> AbstractFileSystem:
 		self.__tmp_iter_array_index = 0
 		self.__tmp_iter_array = [ file for file in self.sandbox.glob( '*' ) ]
 		return self
@@ -443,7 +452,7 @@ class FileSystem(AbstractFileSystem):
 		del self.__tmp_iter_array
 		raise StopIteration
 
-	def __contains__(self, item):
+	def __contains__(self, item) -> bool:
 		if item in self.cache.keys():
 			return True
 

@@ -65,6 +65,7 @@ class LogMessage:
 
 
 class LoggerAdapter(logging.LoggerAdapter, logging.Logger):
+    # type: ignore[misc]
     """Fix loggers to use str.format().
 
     """
@@ -89,6 +90,7 @@ class LoggerAdapter(logging.LoggerAdapter, logging.Logger):
         args and kwargs.
         """
         if self.isEnabledFor(level):
+            # noinspection PyProtectedMember
             self.logger._log(
                 level,
                 LogMessage(msg, args, kwargs),

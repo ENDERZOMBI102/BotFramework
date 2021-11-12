@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from typing import Dict
 
 import discord
 
@@ -10,11 +9,11 @@ class AbstractServer(metaclass=ABCMeta):
 
 	guild: discord.Guild
 	prefix: str = '!!'
-	roleRules: Dict[ str, object ]
-	secondaryPrefix: Dict[int, str]
+	roleRules: dict[ str, object ]
+	secondaryPrefix: dict[int, str]
 
 	@abstractmethod
-	async def handleMsg( self, msg: discord.Message ):
+	async def handleMsg( self, msg: discord.Message ) -> None:
 		"""
 		Handles a discord message object
 		:param msg: message to handle

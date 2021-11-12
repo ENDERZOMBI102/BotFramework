@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any
 
 from botframework.abc.database.database import AbstractDatabase
 from botframework.abc.database.guild import AbstractGuild
@@ -7,7 +7,7 @@ from botframework.dataclass.user import User
 
 class Guild(AbstractGuild):
 
-	_userCache: Dict[str, User]
+	_userCache: dict[str, User]
 
 	def __init__(self, guildID: int, db: AbstractDatabase):
 		super(Guild, self).__init__(guildID, db)
@@ -48,12 +48,12 @@ class Guild(AbstractGuild):
 		"""
 		if discordID not in self._userCache.keys():
 			# EXPLANATION: select an user with userID userID and guildID of this guild
-			userData: Dict[ str, Any ] = self.db.makeRequest(
+			userData: dict[ str, Any ] = self.db.makeRequest(
 				'SELECT * FROM users WHERE guildID = ? AND discordID = ?',
 				self.guildID,
 				discordID,
 				table='users',
-			)
+			)  # type: ignore
 			userData.pop( 'guildID' )
 			self._userCache[ str( discordID ) ] = User( **userData )
 		return self._userCache.get( str( discordID ) )

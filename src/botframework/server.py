@@ -1,18 +1,16 @@
-import asyncio
-from typing import Dict, Callable, Coroutine, Union, Any
-
-from discord import Message, Reaction, Member
-import discord
-
 import logging
+from typing import Dict, Any, Optional
 
-from . import Database, utils, commandSystem
+import discord
+from discord import Message, Reaction, Member
+
+from . import Database, commandSystem
 from .abc.database.guild import AbstractGuild
 from .abc.server import AbstractServer
 from .dataclass.user import User
 from .eventSystem import EventSystem, Events
 from .logging import get_logger
-
+from .types import CommandListener
 
 defaultPerms: Dict[str, Any] = {
 	'manage bot': True,
@@ -37,7 +35,7 @@ class Server( AbstractServer ):
 		self.commands = commandSystem.instance
 		self.secondaryPrefix = { **defaultSecondaryPrefixes }  # do not use the same dict, clone it
 
-	async def handleMsg( self, msg: Message ):
+	async def handleMsg( self, msg: Message ) -> None:
 		"""
 		Handles a discord message object
 		:param msg: message to handle
@@ -73,15 +71,15 @@ class Server( AbstractServer ):
 			f'issuer: {msg.author.name}'
 		)
 		# get function/coroutine
-		coro: Union[Coroutine, Callable] = self.commands.getOrDefault( cmd[ 0 ].lower(), utils.placeHolderCoro )
+		coro: Optional[CommandListener] = self.commands.get( cmd[ 0 ].lower() )
 		# check if its a command/coroutine
-		if not asyncio.iscoroutinefunction(coro):
-			return
-		# execute command
-		code = await coro(self, msg)
-		# check return code, None means that the placeholder was used
-		if code is None:
+		if coro is not None:
+			# command doesn't exists
 			await msg.channel.send( f'Unknown command: {cmd[ 0 ]}' )
+		else:
+			# execute command
+			assert coro is not None, 'coro is never None here'
+			await coro(self, msg)
 
 	async def handleReactionAdd( self, reaction: Reaction, user: Member ) -> None:
 		"""
@@ -96,6 +94,7 @@ class Server( AbstractServer ):
 		)
 		await EventSystem.INSTANCE.invoke(
 			event=Events.ReactionAdded,
+			server=self,
 			reaction=reaction,
 			cause=user
 		)
@@ -113,6 +112,7 @@ class Server( AbstractServer ):
 		)
 		await EventSystem.INSTANCE.invoke(
 			event=Events.ReactionRemoved,
+			server=self,
 			reaction=reaction,
 			cause=user
 		)
@@ -122,4 +122,6 @@ class Server( AbstractServer ):
 		Getter for this guild's database interface
 		:return: Database object
 		"""
-		return Database.instance.getGuild( self.guild.id )
+		guild = Database.instance.getGuild( self.guild.id )
+		assert guild is not None, 'Why is it None?'
+		return guild

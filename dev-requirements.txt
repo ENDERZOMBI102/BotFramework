@@ -1,3 +1,4 @@
 twine==3.6.0
 build==0.7.0
 mypy==0.910
+types-Pillow==8.3.7

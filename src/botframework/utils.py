@@ -1,24 +1,12 @@
 import traceback
-from typing import Any, List, Callable, Iterable
+from typing import TypeVar, List, Callable, Iterable, Any
 from random import choice
 
 import discord
 from discord import Embed, Color
 
 
-def color_palette():
-	"""
-	Returns a random color from a Papaya fruit palette.
-	:return: Random str("r,g,b") from papaya fruit palette
-	"""
-	colors = [
-		"246,125,35",
-		"253,150,58",
-		"255,168,62",
-		"186,163,49",
-		"160,157,51"
-	]
-	return choice(colors)
+T = TypeVar('T')
 
 
 def getAuthors() -> Callable[ [], List[int] ]:
@@ -42,26 +30,14 @@ def embed(title: str, content: str, color: Color) -> Embed:
 	return data
 
 
-def getColor(RGB: str = "255, 255, 255", random: bool = False) -> Color:
+def getColor(RGB: str = '255, 255, 255') -> Color:
 	"""
 	Converts a string of R,G,B values to a discord Color object
-	:param random:
 	:param RGB: the color
 	:return: color obj
 	"""
-
-	if random:
-		rgb = color_palette().split(',')
-
-	else:
-		rgb = RGB.split(',')
-
-	r: int = int( rgb[0] )
-	g: int = int( rgb[1] )
-	b: int = int( rgb[2] )
-	returnColor = discord.colour.Color.from_rgb(r, g, b)
-
-	return returnColor
+	r, g, b = RGB.split(',')
+	return discord.colour.Color.from_rgb( int( r ), int( g ), int( b ) )
 
 
 def getTracebackEmbed( exc: Exception ) -> Embed:
@@ -79,7 +55,7 @@ def getTracebackEmbed( exc: Exception ) -> Embed:
 	)
 
 
-def copyList(source: Iterable[Any] ) -> List[Any]:
+def copyList(source: Iterable[T] ) -> List[T]:
 	"""
 	Copies an iterable to another list
 	:param source: iterable to copy
@@ -88,12 +64,12 @@ def copyList(source: Iterable[Any] ) -> List[Any]:
 	return [ x for x in source]
 
 
-def placeHolderFunc(*args, **kwargs):
+def placeHolderFunc(*args: Any, **kwargs: Any) -> None:
 	""" Just a placeholder for functions that require a function """
 	return None
 
 
-async def placeHolderCoro(*args, **kwargs):
+async def placeHolderCoro(*args: Any, **kwargs: Any) -> None:
 	""" Just a placeholder for functions that require a coroutine """
 	return None
 

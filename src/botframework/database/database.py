@@ -1,12 +1,12 @@
-from typing import Dict, Any, List, Tuple
+from typing import Any, Optional
 
 from botframework.abc.database.backend import AbstractBackend
 from botframework.abc.database.database import AbstractDatabase
+from botframework.abc.database.guild import AbstractGuild
 from botframework.database.backend import SqlBackend
 from botframework.database.guild import Guild
 
-
-_tables: Dict[str, List[str] ] = {
+_tables: dict[ str, list[str] ] = {
 	'users': [
 		'guildID',
 		'discordID',
@@ -17,15 +17,15 @@ _tables: Dict[str, List[str] ] = {
 
 class Database(AbstractDatabase):
 
-	_cache: Dict[int, Guild] = {}
+	_cache: dict[int, Guild] = {}
 	instance: 'Database'
-	backend: AbstractBackend = None
+	_backend: AbstractBackend
 
-	def __init__( self ):
-		self.backend = SqlBackend('../resources/database.db')
+	def __init__( self ) -> None:
+		self._backend = SqlBackend( './resources/database.db' )
 		Database.instance = self
 
-	def getGuild( self, guild: int ) -> Guild:
+	def getGuild( self, guild: int ) -> Optional[AbstractGuild]:
 		"""
 		Returns a Guild object for interacting with the database
 		:param guild: guid ID
@@ -35,30 +35,31 @@ class Database(AbstractDatabase):
 			self._cache[guild] = Guild(guild, self)
 		return self._cache.get(guild)
 
-	def makeRequest( self, sql: str, *args, table: str = '' ) -> List[ Dict[str, Any] ]:
+	def makeRequest( self, sql: str, *args: Any, convertSingle: bool = True, table: str = '' ) -> list[ dict[str, Any] ]:
 		"""
 		Makes a request with SQL code to the database.
 		DO NOT USE VARIABLES IN THE SQL CODE!
 		IS **VERY** INSECURE AND CAN CAUSE DATA LOSS!
+		:param convertSingle: def True, if True when a result list has a single item, extract it from the list and return it
 		:param table: the table this request operates on
 		:param sql: SQL code
 		:param args: arguments for value sanitizing
 		:return: a List with the result (can be emtpy)
 		"""
-		return _makeDictionary( table, self.backend.makeRequest(sql, *args) )
+		return _makeDictionary( table, self._backend.makeRequest( sql, *args ) )
 
 	def save( self ) -> None:
 		"""	Commit changes to the database file	"""
-		if self.backend is not None:
-			self.backend.save()
+		if self._backend is not None:
+			self._backend.save()
 
-	def __del__( self ):
+	def __del__( self ) -> None:
 		# save when closing!
 		self.save()
 
 
-def _makeDictionary( table: str, row: List[Tuple] ) -> List[ Dict[str, Any] ]:
-	items: List[ Dict[str, Any] ] = []
+def _makeDictionary( table: str, row: list[tuple] ) -> list[ dict[str, Any] ]:
+	items: list[ dict[str, Any] ] = []
 	for item in row:
 		if table in _tables.keys():
 			template = _tables[table]  # get the dictionary template from the known tables
@@ -69,6 +70,6 @@ def _makeDictionary( table: str, row: List[Tuple] ) -> List[ Dict[str, Any] ]:
 				}
 			)
 		else:
-			items.append( { pos: value for pos, value in enumerate(item) } )
+			items.append( { str(pos): value for pos, value in enumerate(item) } )
 
 	return items
